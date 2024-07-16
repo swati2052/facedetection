@@ -1,5 +1,2 @@
-public class main{
-    public class void main(String args[]){
-System.out.println("hello");
-    }
-}
+# Face detection system
+This is a Python based face detection system using Built-in dataset.
