@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Authentication</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'style.css' %}">
+</head>
+<body>
+    <div class="container">
+        <h1>Secure Authentication</h1>
+        <p>Please choose an option:</p>
+        <!-- Main Options -->
+        <button id="register-btn">Register</button>
+        <button id="signin-btn">Sign In</button>
+
+        <!-- Register Form -->
+        <div id="register-form" class="form-section">
+            <h2>Register</h2>
+            <form id="register" method="POST", enctype="multipart/form-data">
+                {% csrf_token %}
+                <meta name="csrf-token" content="{{ csrf_token }}">
+                <input type="text" id="name" placeholder="Enter username" required>
+                <input type="email" id="email" placeholder="Enter your Email" required>
+                <input type="text" id="password" placeholder="Enter password" required>
+                <button id="capture-face-register">Capture here</button>
+                <video id="video-register" autoplay></video>
+                <canvas id="canvas-register" style="display:none;"></canvas>
+                <input type="submit" value="Register">
+            </form>
+            <button class="back-btn" id="back-from-register">Back</button>
+        </div>
+
+        <div id="signin-form" class="form-section">
+            <h2>Sign In</h2>
+            <form id="sign_in" method="POST" enctype="multipart/form-data">
+                {% csrf_token %}
+                <meta name="csrf-token" content="{{ csrf_token }}">
+        
+                <!-- Radio buttons to choose the method -->
+                <input type="text" id="signin-name" placeholder="Enter username" required>
+                <p>Select an authentication method:</p>
+                <div>
+                    <input type="radio" id="auth-password" name="auth-method" value="password" checked>
+                    <label for="auth-password">Password</label>
+                    <input type="radio" id="auth-face" name="auth-method" value="face">
+                    <label for="auth-face">Face Capture</label>
+                </div>
+        
+                <!-- Password Input -->
+                <div id="password-section">
+                    <input type="password" id="signin-password" placeholder="Enter password">
+                </div>
+        
+                <!-- Face Capture Section -->
+                <div id="face-section" style="display: none;">
+                    <button type="button" id="capture-face-signin">Open Camera</button>
+                    <video id="video-signin" autoplay></video>
+                    <canvas id="canvas-signin" style="display:none;"></canvas>
+                </div>
+                
+                <button type="button" id="match-face-signin">Submit</button>
+                <!-- <button type="submit" id="signin-submit">Sign In</button> -->
+                <button class="back-btn" id="back-from-signin">Back</button>
+            </form>
+        </div>
+        
+    </div>
+    
+    <!-- Inline JavaScript -->
+    <script>
+        const registerBtn = document.getElementById('register-btn');
+        const signinBtn = document.getElementById('signin-btn');
+        const registerForm = document.getElementById('register-form');
+        const signinForm = document.getElementById('signin-form');
+        const backFromRegister = document.getElementById('back-from-register');
+        const backFromSignin = document.getElementById('back-from-signin');
+
+        const videoRegister = document.getElementById('video-register');
+        const videoSignin = document.getElementById('video-signin');
+        const authPasswordRadio = document.getElementById('auth-password');
+        const authFaceRadio = document.getElementById('auth-face');
+        const passwordSection = document.getElementById('password-section');
+        const faceSection = document.getElementById('face-section');
+
+        // Toggle sections based on the selected authentication method
+        authPasswordRadio.addEventListener('change', () => {
+            if (authPasswordRadio.checked) {
+                passwordSection.style.display = 'block';
+                faceSection.style.display = 'none';
+            }
+        });
+
+        authFaceRadio.addEventListener('change', () => {
+            if (authFaceRadio.checked) {
+                passwordSection.style.display = 'none';
+                faceSection.style.display = 'block';
+            }
+        });
+
+        // Show Register Form
+        registerBtn.addEventListener('click', () => {
+            registerForm.style.display = 'block';
+            registerBtn.style.display = 'none';
+            signinBtn.style.display = 'none';
+        });
+
+        // Show Sign In Form
+        signinBtn.addEventListener('click', () => {
+            signinForm.style.display = 'block';
+            registerBtn.style.display = 'none';
+            signinBtn.style.display = 'none';
+        });
+
+        // Back from Register Form
+        backFromRegister.addEventListener('click', () => {
+            registerForm.style.display = 'none';
+            registerBtn.style.display = 'block';
+            signinBtn.style.display = 'block';
+        });
+
+        // Back from Sign In Form
+        backFromSignin.addEventListener('click', () => {
+            signinForm.style.display = 'none';
+            registerBtn.style.display = 'block';
+            signinBtn.style.display = 'block';
+        });
+
+        // Function to capture the image and convert it to Base64 format
+        const captureImage = (videoElementId, canvasElementId) => {
+            const video = document.getElementById(videoElementId);
+            const canvas = document.getElementById(canvasElementId);
+            const context = canvas.getContext('2d');
+
+            // Set canvas size to match the video frame
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+
+            // Draw video frame onto the canvas
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // Convert canvas content to Base64 image (JPEG format)
+            return canvas.toDataURL('image/jpeg');
+        };
+
+        // Handle Camera for Register
+        document.getElementById('capture-face-register').addEventListener('click', async (e) => {
+            e.preventDefault();
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                videoRegister.srcObject = stream;
+            } catch (err) {
+                console.error('Error accessing camera:', err);
+                alert('Could not access the camera.');
+            }
+        });
+
+        // Handle Camera for Sign In
+        document.getElementById('capture-face-signin').addEventListener('click', async (e) => {
+            e.preventDefault();
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                videoSignin.srcObject = stream;
+            } catch (err) {
+                console.error('Error accessing camera:', err);
+                alert('Could not access the camera.');
+            }
+        });
+
+        // Match Identity Placeholder (Sign In)
+        document.getElementById('match-face-signin').addEventListener('click', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('signin-name').value;
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            const formData = new FormData();
+            formData.append('name', name);
+            if (authPasswordRadio.checked) {
+                const password = document.getElementById('signin-password').value;
+                formData.append('password', password);
+                formData.append('method', 'passAuth');
+            }
+            else{
+                const base64Image = captureImage('video-signin', 'canvas-signin');
+                formData.append('image', base64Image);
+                formData.append('method', '');
+            }
+
+            // Send the form data to the backend
+            try {
+                const response = await fetch('face-auth/capture/', {  // Make sure the URL matches your Django URL pattern
+                    method: 'POST',
+                    headers: {'X-CSRFToken': csrfToken },
+                    body: formData,
+                });
+                
+                if (response.ok) {
+                    alert(await response.text());
+                } else {
+                    alert('Login failed.');
+                }
+            } catch (err) {
+                console.error('Error sending data to backend:', err);
+                alert('Error sending image to the server.');
+            }
+        });
+
+        // Submit Register Form
+        document.getElementById('register').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+            // Capture the image for registration
+            const base64Image = captureImage('video-register', 'canvas-register');
+            
+            // Create a FormData object to send image with other form data
+            const formData = new FormData();
+            formData.append('name', name);
+            formData.append('email', email);
+            formData.append('password', password);
+            formData.append('image', base64Image);
+
+            // Send the form data to the backend
+            try {
+                const response = await fetch('face-auth/register/', {  // Make sure the URL matches your Django URL pattern
+                    method: 'POST',
+                    headers: {'X-CSRFToken': csrfToken },
+                    body: formData,
+                });
+                
+                if (response.ok) {
+                    alert('Registered Successfully!\nName: ' + name + '\nEmail: ' + email + '\nIdentity captured.');
+                } else {
+                    alert('Registration failed.');
+                }
+            } catch (err) {
+                console.error('Error sending data to backend:', err);
+                alert('Error sending image to the server.');
+            }
+        });
+    </script>
+</body>
+</html>
